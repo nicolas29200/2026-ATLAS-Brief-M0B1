@@ -1,4 +1,4 @@
-# Plateforme IA-TOS - Starter Kit Apprenants (Brief 1 / Module 0) test
+# Plateforme IA-TOS - Starter Kit Apprenants (Brief 1 / Module 0) 
 
 Bienvenue dans le starter kit du **Brief 1 - Module 0 (Socle Applicatif & Microservices IA)** du projet **IA-TOS (Intellicenter)** pour la promotion OPCO Atlas (Simplon & Atos 2026).
 
