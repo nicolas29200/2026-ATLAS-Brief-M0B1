@@ -27,25 +27,42 @@ Le dataset complet contient des variables demographiques et contextuelles qui se
 pour realiser l'audit d'equite algorithmique (Disparate Impact), l'anonymisation RGPD et la mitigation des biais.
 """)
 
-# ==============================================================================
-# TODO (Apprenants) : Implémenter le formulaire Streamlit et l'appel API
-#
-# Étapes suggérées :
-# 1. Créer un formulaire avec st.form("form_credit").
-# 2. Ajouter les champs de saisie :
-#    - montant_demande (st.number_input, ex: 1000 à 50000 €)
-#    - duree_mois (st.slider, ex: 6 à 84 mois)
-#    - revenu_mensuel (st.number_input, ex: 500 à 20000 €)
-#    - bouton de soumission (st.form_submit_button)
-# 3. Lors de la soumission du formulaire :
-#    a. Émettre un POST vers f"{FASTAPI_URL}/predict/credit" avec le payload JSON :
-#       {"montant_demande": float, "duree_mois": int, "revenu_mensuel": float}
-#    b. Récupérer la réponse JSON (CreditPredictResponse) contenant :
-#       - score (float entre 300 et 850)
-#       - decision (str : 'Favorable', 'Ajourne / Examen Approfondi', 'Defavorable')
-#       - seuil_recommande (float)
-#       - model_version (str)
-#    c. Restituer visuellement le score (ex: st.metric, jauge de progression, couleur de badge).
-# ==============================================================================
 
-st.info("A vous de jouer ! Implementez le formulaire et l'affichage des predictions de credit.")
+with st.form("form_credit") :
+    montant_demande = st.number_input("Montant de la demande (€)", min_value=1000, max_value=50000)
+    duree_mois = st.slider("Durée du crédit (mois)", min_value=6, max_value=84, step=1)
+    revenu_mensuel = st.number_input("Revenu mensuel (€)", min_value=500, max_value=20000)
+    submit_button = st.form_submit_button("Procéder à l'évaluation")
+
+if submit_button:
+    payload = {
+        "montant_demande": float(montant_demande),
+        "duree_mois": int(duree_mois),
+        "revenu_mensuel": float(revenu_mensuel)
+    }
+    try:
+        response = requests.post(f"{FASTAPI_URL}/predict/credit", json=payload, timeout=120)
+
+        data = response.json()
+        score = data.get("score")
+        decision = data.get("decision")
+        motif = data.get("motif")
+        type_modele = data.get("type_modele")
+
+        score_normalise = (score - 300) / (850 - 300)
+        col_score, col_decision = st.columns(2)
+        with col_score:
+            st.metric("Score de crédit", f"{score:.2f}", help="Echelle de 300 (risque eleve) a 850 (risque faible)")
+            st.progress(score_normalise)
+        with col_decision:
+            if decision == "Favorable":
+                st.success(f"✅ {decision}")
+            elif decision == "Defavorable":
+                st.error(f"❌ {decision}")
+            else:
+                st.warning(f"⚠️ {decision}")
+
+        st.markdown(f"**Motif :** {motif}")
+        st.markdown(f"**Modele utilise :** {type_modele}")
+    except Exception as e:
+        st.error(f"Erreur lors de l'appel à l'API : {e}")

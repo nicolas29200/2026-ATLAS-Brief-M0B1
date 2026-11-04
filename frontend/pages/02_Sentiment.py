@@ -27,22 +27,40 @@ baseline de depart. Elle sera confrontee puis remplacee dans les modules suivant
 de Transformers pre-entraines en francais (**CamemBERT / RoBERTa**) et du Fine-Tuning LoRA (PEFT).
 """)
 
-# ==============================================================================
-# TODO (Apprenants) : Implémenter la saisie textuelle et l'appel API
-#
-# Étapes suggérées :
-# 1. Proposer une zone de saisie texte avec st.text_area().
-# 2. Optionnel : Proposer des boutons de texte d'exemples (positif, négatif, neutre).
-# 3. Ajouter un bouton d'action avec st.button("Analyser la polarité").
-# 4. Lors du clic :
-#    a. Émettre un POST vers f"{FASTAPI_URL}/predict/sentiment" avec le payload JSON :
-#       {"texte": texte_saisi}
-#    b. Récupérer la réponse JSON (SentimentPredictResponse) contenant :
-#       - label (str : 'Positif', 'Neutre', 'Negatif')
-#       - compound (float entre -1.0 et 1.0)
-#       - details (dict avec 'pos', 'neu', 'neg')
-#       - method (str)
-#    c. Restituer le résultat avec des composants visuels adaptés (st.metric, st.progress, etc.).
-# ==============================================================================
+texte_saisi = st.text_area("Saisissez votre texte ici :")
+col_positif, col_neutre, col_negatif = st.columns(3)
+with col_positif:
+    if st.button("Positif"):
+        st.success("It's great !")
+with col_neutre:
+    if st.button("Neutre"):
+        st.warning("I'm normal")
+with col_negatif:
+    if st.button("Negatif"):
+        st.error("It's so bad !")
 
-st.info("A vous de jouer ! Implementez l'analyseur de sentiment et l'affichage des metriques NLP.")
+if st.button("Analyser la polarité") and texte_saisi:
+    payload = {"texte": texte_saisi}
+    try:
+        response = requests.post(f"{FASTAPI_URL}/predict/sentiment", json=payload, timeout=120)
+        
+        data = response.json()
+        label = data.get("label")
+        compound = data.get("compound")
+        details = data.get("scores")
+        method = data.get("type_modele")
+
+        if label == "Positif":
+            st.success(f"✅ {label}")
+            st.metric("Score de sentiment", f"{details['pos']:.2f}")
+        elif label == "Negatif":
+            st.error(f"❌ {label}")
+            st.metric("Score de sentiment", f"{details['neg']:.2f}")
+        else:
+            st.warning(f"⚠️ {label}")
+            st.metric("Score de sentiment", f"{details['neu']:.2f}")
+        st.metric("Coumpound", f"{compound:.2f}", help="Echelle de -1 (Negatif) a 1 (Positif), entre -0.05 et 0.05 (Neutre)")
+        st.markdown(f"**details :** {details}")
+        st.markdown(f"**Methode utilise :** {method}")
+    except Exception as e:
+        st.error(f"Erreur lors de l'appel à l'API : {e}")

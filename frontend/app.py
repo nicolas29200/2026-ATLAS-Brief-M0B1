@@ -69,7 +69,50 @@ et connecte au LLM local **Qwen 2.5** via **Ollama**. Il possede un outil determ
 # ==============================================================================
 if "messages" not in st.session_state:
     st.session_state["messages"] = []
-    
-st.chat_message(st.session_state["messages"])
-user_prompt = st.chat_input()
-st.info("A vous de jouer ! Implementez la logique de chat conversationnelle ci-dessous.")
+
+for message in st.session_state["messages"]:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+user_prompt = st.chat_input("Pose moi tes questions !")
+
+if user_prompt:
+
+    st.session_state["messages"].append({"role": "user", "content": user_prompt})
+    with st.chat_message("user"):
+        st.markdown(user_prompt)
+
+    history_payload = [
+        {"role": msg["role"], "content": msg["content"]}
+        for msg in st.session_state["messages"][:-1]
+    ]
+
+    with st.chat_message("assistant"):
+        try:
+            response = requests.post(
+                f"{FASTAPI_URL}/chat",
+                json={"message": user_prompt, "history": history_payload},
+                timeout=120,
+            )
+            data = response.json()
+
+            reponse = data.get("response")
+            tool_called = data.get("tool_called")
+            tool_results = data.get("tool_results")
+
+            st.markdown(reponse)
+
+            if tool_called:
+                with st.expander("calculs effectues"):
+                    for result in tool_results:
+                        st.code(result)
+
+            st.session_state["messages"].append(
+                {"role": "assistant", "content": reponse}
+            )
+        except Exception as e:
+            error_message = f"Erreur lors de l'appel a l'API : {e}"
+            st.error(error_message)
+            st.session_state["messages"].append(
+                {"role": "assistant", "content": error_message}
+            )
